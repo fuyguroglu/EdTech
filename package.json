@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/fuyguroglu/EdTech#readme",
   "dependencies": {
+    "@prisma/client": "^7.8.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",
@@ -38,6 +39,7 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.6",
     "postcss": "^8.5.15",
+    "prisma": "^7.8.0",
     "tailwindcss": "^4.3.0",
     "typescript": "^6.0.3"
   }

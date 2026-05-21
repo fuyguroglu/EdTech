@@ -1,0 +1,266 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  INSTRUCTOR
+  STUDENT
+}
+
+enum CourseCategory {
+  MATH
+  SCIENCE
+  ENGLISH
+  HISTORY
+  COMPUTER_SCIENCE
+  FOREIGN_LANGUAGE
+  ARTS
+  OTHER
+}
+
+enum DifficultyLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum EnrollmentType {
+  OPEN
+  APPROVAL_REQUIRED
+}
+
+enum EnrollmentStatus {
+  PENDING
+  ACTIVE
+  CANCELLED
+  COMPLETED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+  SHORT_ANSWER
+  ESSAY
+  FILE_UPLOAD
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// Models
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  passwordHash  String
+  name          String
+  avatarUrl     String?
+  role          UserRole @default(STUDENT)
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  instructor    Instructor?
+  enrollments   Enrollment[]
+  gradedSubmissions Submission[] @relation("GradedBy")
+
+  @@map("users")
+}
+
+model Instructor {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  bio                   String?
+  expertise             String[]
+  approved              Boolean  @default(false)
+  revenueSharePercentage Int     @default(50)
+  stripeAccountId       String?
+  createdAt             DateTime @default(now())
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses Course[]
+
+  @@map("instructors")
+}
+
+model Course {
+  id             String          @id @default(cuid())
+  instructorId   String
+  title          String
+  description    String
+  thumbnailUrl   String?
+  category       CourseCategory
+  difficultyLevel DifficultyLevel
+  priceMonthly   Int             // in cents
+  enrollmentType EnrollmentType  @default(OPEN)
+  published      Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  // Relations
+  instructor   Instructor   @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  sections     Section[]
+  assessments  Assessment[]
+  enrollments  Enrollment[]
+
+  @@map("courses")
+}
+
+model Section {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String
+  description String?
+  order       Int
+  createdAt   DateTime @default(now())
+
+  // Relations
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@map("sections")
+}
+
+model Lesson {
+  id              String   @id @default(cuid())
+  sectionId       String
+  title           String
+  content         String   // Rich text/JSON
+  videoUrl        String?  // YouTube URL initially
+  durationMinutes Int?
+  order           Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  section          Section           @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  assessments      Assessment[]
+  lessonProgress   LessonProgress[]
+
+  @@map("lessons")
+}
+
+model Assessment {
+  id                String   @id @default(cuid())
+  lessonId          String?  // Nullable for course-wide assessments
+  courseId          String
+  title             String
+  description       String?
+  passingScore      Int      // Percentage
+  timeLimitMinutes  Int?
+  attemptsAllowed   Int?     // Nullable for unlimited attempts
+  createdAt         DateTime @default(now())
+
+  // Relations
+  lesson      Lesson?      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  course      Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  questions   Question[]
+  submissions Submission[]
+
+  @@map("assessments")
+}
+
+model Question {
+  id             String       @id @default(cuid())
+  assessmentId   String
+  questionText   String
+  type           QuestionType
+  options        Json?        // For multiple choice questions
+  correctAnswer  String?      // Nullable for essay questions
+  points         Int
+  order          Int
+  createdAt      DateTime     @default(now())
+
+  // Relations
+  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+
+  @@map("questions")
+}
+
+model Enrollment {
+  id                   String           @id @default(cuid())
+  studentId            String
+  courseId             String
+  status               EnrollmentStatus @default(PENDING)
+  stripeSubscriptionId String?
+  enrolledAt           DateTime         @default(now())
+  expiresAt            DateTime?
+
+  // Relations
+  student         User             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  course          Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessonProgress  LessonProgress[]
+  submissions     Submission[]
+  transactions    Transaction[]
+
+  @@unique([studentId, courseId])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  id           String    @id @default(cuid())
+  enrollmentId String
+  lessonId     String
+  completed    Boolean   @default(false)
+  completedAt  DateTime?
+
+  // Relations
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  lesson     Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, lessonId])
+  @@map("lesson_progress")
+}
+
+model Submission {
+  id             String    @id @default(cuid())
+  enrollmentId   String
+  assessmentId   String
+  attemptNumber  Int
+  answers        Json
+  score          Int?
+  maxScore       Int
+  graded         Boolean   @default(false)
+  gradedBy       String?
+  gradedAt       DateTime?
+  feedback       String?
+  submittedAt    DateTime  @default(now())
+
+  // Relations
+  enrollment Enrollment  @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  assessment Assessment  @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  grader     User?       @relation("GradedBy", fields: [gradedBy], references: [id])
+
+  @@map("submissions")
+}
+
+model Transaction {
+  id               String            @id @default(cuid())
+  enrollmentId     String
+  stripePaymentId  String
+  amount           Int               // Total in cents
+  instructorAmount Int               // Instructor's cut in cents
+  platformAmount   Int               // Platform's cut in cents
+  status           TransactionStatus @default(PENDING)
+  createdAt        DateTime          @default(now())
+
+  // Relations
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+
+  @@map("transactions")
+}
