@@ -80,6 +80,55 @@ A scalable EdTech marketplace connecting private tutors/instructors with high sc
 
 ## Implementation Notes
 
+### Tailwind CSS v4 Configuration
+
+**CRITICAL:** Tailwind v4 uses completely different syntax from v3!
+
+**Correct Setup:**
+```css
+/* app/globals.css */
+@import "tailwindcss";
+
+body {
+  font-family: system-ui, sans-serif;
+}
+```
+
+**PostCSS Config:**
+```javascript
+// postcss.config.mjs
+const config = {
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
+};
+export default config;
+```
+
+**What's Different in v4:**
+- ❌ NO `@tailwind base;`, `@tailwind components;`, `@tailwind utilities;`
+- ✅ USE `@import "tailwindcss";` instead
+- ❌ NO `tailwind.config.ts` needed (auto-detects content)
+- ✅ All default colors work out of the box
+- ✅ Custom colors defined with `@theme` directive in CSS
+
+**Custom Colors (if needed):**
+```css
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #6366f1;
+  --color-brand-light: #a5b4fc;
+}
+
+/* Generates: text-brand, bg-brand, border-brand-light, etc. */
+```
+
+**References:**
+- [Tailwind CSS v4.0 Official Docs](https://tailwindcss.com/blog/tailwindcss-v4)
+- [Tailwind v4 + Next.js Setup Guide](https://designrevision.com/blog/tailwind-nextjs-setup)
+- [Moving from Tailwind 3 to 4](https://www.9thco.com/labs/moving-from-tailwind-3-to-tailwind-4)
+
 ### Prisma 7 Configuration
 - Using adapter-based setup (new in Prisma 7)
 - Database URL configured via prisma.config.ts
