@@ -135,18 +135,89 @@ export default config;
 - Connection pooling via pg library
 - Type generation to lib/generated/prisma/
 
+### Interactive Course Architecture
+
+**Card-Based Lesson System:**
+- Each course is a series of interactive "cards" that students progress through
+- `LessonContainer` manages navigation (prev/next), progress bar, and card state
+- `LessonCard` provides consistent wrapper with numbering and styling
+- Cards can contain any mix of: text, math, visualizations, quizzes, reveals
+
+**Component Pattern:**
+```typescript
+// Course page defines cards as render functions (prevents state freezing)
+const cards = [
+  {
+    title: "Card Title",
+    description: "Card description",
+    component: () => <CardComponent />,  // Function, not JSX element
+  },
+];
+
+// Each card is a React component with its own state
+function CardComponent() {
+  const [state, setState] = useState(initialValue);
+  return (
+    <LessonCard number={1} title="..." description="...">
+      {/* Interactive content */}
+    </LessonCard>
+  );
+}
+```
+
+**Visualization Pattern:**
+- SVG-based for sharp scaling and animations
+- Parametric (accept props like mu, sigma, angle, etc.)
+- Use `useMemo` for expensive calculations
+- Add `key` prop when SVG doesn't auto-update on prop changes
+- Gradients and animations defined inline with `<defs>`
+
+**Sound System:**
+- Web Audio API for zero-latency UI feedback
+- Different tones for: drop, correct, wrong, reveal, click
+- Simple frequency-based oscillators (no audio files needed)
+- Call `playSound("correct")` anywhere to play
+
+**Math Rendering:**
+- KaTeX for LaTeX math notation
+- `<MathText math="\\mu = 0" />` for inline
+- `<MathText math="..." display={true} />` for block equations
+- Escaping: Use `\\` for backslashes in strings
+
+**Progressive Disclosure:**
+- `<RevealBox>` component for step-by-step reveals
+- Variants: default (gray), success (green), info (blue), warning (yellow)
+- Encourages active learning vs passive reading
+
 ### Project Structure
 ```
 /app                    - Next.js App Router pages
-  /courses              - Course catalog page
+  /courses              - Course catalog and course pages
+    page.tsx            - Course catalog with 3 courses
+    /statistics-normal-distribution  - 10-card interactive lesson
+    /physics-electromagnetic-induction-v2  - 7-card interactive lesson
   layout.tsx            - Root layout with Navbar/Footer
   page.tsx              - Homepage
 /components
-  /ui                   - shadcn/ui components
+  /ui                   - shadcn/ui components (Button, Card, Badge, etc.)
+  /lesson               - Reusable lesson components
+    lesson-container.tsx  - Multi-card navigation with progress
+    lesson-card.tsx       - Individual card wrapper
+    reveal-box.tsx        - Progressive disclosure UI
+    math-text.tsx         - KaTeX math rendering
+    quiz.tsx              - Interactive quiz component
+  /visualizations       - Interactive SVG visualizations
+    bell-curve.tsx        - Normal distribution curve
+    galton-board.tsx      - Ball drop simulation
+    histogram-to-curve.tsx - Histogram to curve transition
+    magnet-coil-demo.tsx  - EM induction demo
+    flux-demo.tsx         - Magnetic flux visualization
   navbar.tsx            - Main navigation
   footer.tsx            - Site footer
 /lib
   /generated/prisma     - Generated Prisma Client
+  /utils
+    sound-system.ts     - Web Audio API sound effects
   prisma.ts             - Prisma singleton instance
   utils.ts              - Utility functions (cn)
 /prisma
@@ -277,10 +348,10 @@ prisma.config.ts        - Prisma configuration
 
 ## Current Status
 
-**Phase 1 Complete** - Foundation is fully set up and ready for feature development.
+**Phase 1 Complete + Example Courses Built** - Foundation complete with two fully interactive demo courses.
 
 ### Completed
-- ✅ Next.js 14+ with TypeScript and App Router
+- ✅ Next.js 16.2.6 with TypeScript and App Router
 - ✅ Tailwind CSS v4 configured and working
 - ✅ shadcn/ui component library integrated
 - ✅ PostgreSQL database schema designed
@@ -289,21 +360,78 @@ prisma.config.ts        - Prisma configuration
 - ✅ Responsive design with modern styling
 - ✅ Git repository with GitHub integration
 - ✅ Build pipeline verified
+- ✅ **Reusable lesson component architecture built**
+- ✅ **Interactive Normal Distribution course (10 cards)**
+- ✅ **Interactive Electromagnetic Induction course (7 cards)**
+- ✅ **Course catalog page with 3 courses listed**
+- ✅ **Sound system (Web Audio API)**
+- ✅ **Math rendering (KaTeX integration)**
+- ✅ **Interactive SVG visualizations**
+
+### Demo Courses Built
+
+**1. Statistics: Normal Distribution (FREE Demo)**
+- 10 interactive cards with progressive learning
+- Features: Galton board simulation, bell curve explorer, z-score calculator
+- Interactive sliders for μ and σ (note: known issue with visual updates)
+- Practice problems with instant feedback
+- Final challenge quiz with scoring
+- Route: `/courses/statistics-normal-distribution`
+
+**2. Physics: Electromagnetic Induction (FREE Demo)**
+- 7 interactive cards covering Faraday's and Lenz's Laws
+- Features: Moving magnet simulation, flux calculator, real-time EMF calculations
+- Interactive demos for magnetic flux and induction
+- Practice problems and real-world applications
+- Route: `/courses/physics-electromagnetic-induction-v2`
+
+**3. A-Level Electromagnetic Induction (Paid - $29.99/month)**
+- Listed on catalog (not yet built)
+- 24 lessons planned
+- Advanced content for exam preparation
+
+### Reusable Component Library
+
+**Lesson Components:**
+- `LessonContainer` - Multi-card navigation with progress bar and prev/next controls
+- `LessonCard` - Card wrapper with numbering and consistent styling
+- `RevealBox` - Progressive disclosure component with variants (default, success, info, warning)
+- `MathText` - KaTeX wrapper for LaTeX math rendering (inline and display modes)
+- `Quiz` - Multiple choice quiz with instant visual feedback
+
+**Visualization Components:**
+- `BellCurve` - Parametric normal distribution with zones and highlighting
+- `GaltonBoard` - Animated ball drop with histogram building
+- `HistogramToCurve` - 4-phase transition from bars to smooth curve
+- `MagnetCoilDemo` - Interactive magnet movement through coil
+- `FluxDemo` - Magnetic flux calculator with angle/field controls
+
+**Utilities:**
+- `sound-system.ts` - Web Audio API for UI sound effects (drop, correct, wrong, reveal, click)
+
+### Known Issues
+- ⚠️ **Slider visual update bug**: On Normal Distribution cards 3-4, sliders update state correctly and trigger recalculations, but the BellCurve SVG doesn't visually re-render. Console logs show proper updates. Needs further investigation.
 
 ### Next Steps
-- 🔄 Create example course mockups for instructor pitches
-- ⏳ Build instructor course creation interface
-- ⏳ Implement authentication system
-- ⏳ Develop student course viewing experience
+- 🔧 Fix BellCurve SVG re-rendering issue
+- 🔄 Build instructor course creation interface
+- ⏳ Implement authentication system (NextAuth)
+- ⏳ Develop student enrollment and progress tracking
+- ⏳ Use demo courses for instructor pitches
 
 ## Development Phases
 
 ### Phase 1: Foundation (MVP Core) ✅ COMPLETE
 - [x] Project documentation
 - [x] Next.js + TypeScript setup
-- [x] Tailwind CSS + shadcn/ui
+- [x] Tailwind CSS + shadcw/ui
 - [x] Database setup (Prisma + PostgreSQL)
 - [x] Basic UI layout and routing
+- [x] Interactive demo courses (2 complete)
+- [x] Reusable lesson component architecture
+- [x] Visualization framework (SVG-based)
+- [x] Sound system integration
+- [x] Math rendering (KaTeX)
 - [ ] Authentication (NextAuth with email verification) - Next phase
 
 ### Phase 2: Instructor Features
@@ -415,68 +543,104 @@ Must meet WCAG 2.1 Level AA standards:
 
 ## Example Courses for Instructor Pitches
 
-**Approach:** Create visual mockups first (no backend functionality required), then evolve into working examples.
+**Status:** ✅ Two fully interactive demo courses built and deployed.
 
-### Proposed Example Courses
+### Built Demo Courses
 
-**1. Algebra 1: Mastering Linear Equations** (Math)
-- Target: 9th-10th grade
-- 4 sections, 12-15 lessons total
-- Features to showcase:
-  - YouTube video embeds (Khan Academy style explanations)
-  - Step-by-step problem solving with visual aids
+**1. ✅ Normal Distribution: Interactive Journey** (Statistics - FREE)
+- **Target:** A-Level / AP Statistics students
+- **Format:** 10 interactive cards with progressive learning
+- **Route:** `/courses/statistics-normal-distribution`
+- **Features demonstrated:**
+  - Interactive simulations (Galton board with ball physics)
+  - Real-time visualizations that respond to user input
+  - Progressive disclosure (reveal boxes)
   - Multiple choice quizzes with instant feedback
-  - Short answer practice problems
-  - Progress tracking dashboard
+  - Mathematical notation rendering (KaTeX)
+  - Sound effects for engagement
+  - Progress tracking across cards
+  - Clean, modern dark theme
+- **Cards:**
+  1. Galton Board (ball drop simulation)
+  2. Histogram to Curve (animated transition)
+  3. Mean Explorer (interactive μ slider)
+  4. Sigma Explorer (interactive σ slider)
+  5. 68-95-99.7 Rule (zone visualization)
+  6. Reading the Curve (practice problems)
+  7. Z-Scores (live calculator)
+  8. Comparing Distributions (z-score comparison)
+  9. Real World Examples
+  10. Final Challenge Quiz
 
-**2. Biology: Cell Structure & Function** (Science)
+**2. ✅ Electromagnetic Induction** (Physics - FREE)
+- **Target:** A-Level Physics students
+- **Format:** 7 interactive cards covering Faraday's and Lenz's Laws
+- **Route:** `/courses/physics-electromagnetic-induction-v2`
+- **Features demonstrated:**
+  - Physics simulations (moving magnet through coil)
+  - Real-time calculations (flux, EMF)
+  - Interactive parameter controls
+  - Step-by-step concept building
+  - Mathematical formulas with visual explanations
+- **Cards:**
+  1. Introduction to EM Induction
+  2. Faraday's Discovery (magnet/coil demo)
+  3. Magnetic Flux (φ = B·A·cos(θ))
+  4. Faraday's Law (ε = -N·dφ/dt)
+  5. Lenz's Law (direction of current)
+  6. Practice Problems
+  7. Real-World Applications
+
+**3. A-Level Electromagnetic Induction Mastery** (Paid - £29.99)
+- Listed on catalog, not yet built
+- 24 lessons planned for full course
+- Shows pricing model and course card design
+
+### Future Course Ideas
+
+**Algebra 1: Mastering Linear Equations** (Math)
 - Target: 9th-10th grade
-- 3 sections, 10-12 lessons
-- Features to showcase:
-  - Detailed diagrams and labeled images
-  - Video microscopy footage
-  - True/false quick checks
-  - Essay questions about experimental design
-  - Visual progress indicators
+- Interactive graphing tools
+- Step-by-step equation solving
+- Real-world word problems
 
-**3. Essay Writing Fundamentals** (English)
+**Cell Structure & Function** (Biology)
+- Target: 9th-10th grade
+- Labeled diagrams with zoom
+- 3D cell models
+- Microscopy simulations
+
+**Essay Writing Fundamentals** (English)
 - Target: 9th-12th grade
-- 5 sections, 15 lessons
-- Features to showcase:
-  - Sample essays with annotations
-  - Writing prompts and exercises
-  - Rubric examples
-  - File upload for essay submissions
-  - Instructor feedback interface (manual grading)
+- Annotated examples
+- Rubric builders
+- Peer review system
 
-### Mockup Strategy
+### What We've Proven
 
-**Phase 1: Static Mockups** (Current Priority)
-- Create polished course detail pages
-- Design lesson viewer interface
-- Mock up quiz/assessment taking experience
-- Show instructor dashboard with analytics
-- Demonstrate student progress view
+**Technical Capabilities:**
+✅ Complex interactive visualizations with real physics/math
+✅ Smooth animations and transitions
+✅ Progressive learning paths with navigation
+✅ Instant feedback systems
+✅ Mobile-responsive design
+✅ Professional UI/UX polish
+✅ Sound design for engagement
+✅ Mathematical notation rendering
 
-**Phase 2: Interactive Demo** (After instructor feedback)
-- Seed database with example course data
-- Build functional course viewer
-- Enable quiz taking (client-side only)
-- Add basic progress tracking
+**For Instructor Pitches:**
+1. **Visual Impact:** The demos are impressive and engaging
+2. **Professional Quality:** Production-ready appearance
+3. **Engagement:** Interactive elements keep students active
+4. **Flexibility:** Can adapt this framework to any subject
+5. **Modern Tech:** Fast, responsive, works on all devices
 
-**Phase 3: Full Implementation** (Production)
-- Complete backend integration
-- Real authentication and enrollment
-- Stripe payment integration
-- Full instructor course builder
+### Next Demo Priorities
 
-### Key Selling Points to Highlight
-
-1. **Ease of Creation:** Show how simple it is to add content
-2. **Professional Appearance:** Modern, clean, student-friendly design
-3. **Engagement Tools:** Quizzes, videos, progress tracking
-4. **Revenue Potential:** Clear analytics showing student engagement
-5. **AI Assistance (Future):** Tease upcoming features for content creation and grading
+If expanding demos before building backend:
+1. Add a humanities/English course to show versatility
+2. Add a calculator-based math course (algebra/calculus)
+3. Show different content types (video embeds, PDFs, etc.)
 
 ## MVP Success Metrics
 
@@ -501,6 +665,39 @@ Must meet WCAG 2.1 Level AA standards:
 - School district partnerships
 - White-label platform for schools
 
+## Troubleshooting
+
+### BellCurve Slider Issue (UNRESOLVED)
+
+**Problem:** In Normal Distribution course cards 3-4, sliders update state and trigger recalculations, but the curve doesn't visually update.
+
+**Evidence:**
+- Console logs show: "Mu updated to: X", "BellCurve recalculating with mu: X sigma: X"
+- State is updating correctly
+- useMemo dependencies are correct
+- SVG path data is recalculating
+- Adding `key={`${mu}-${sigma}`}` to SVG forces re-render but doesn't fix
+
+**Attempted Fixes:**
+1. ✗ Added `useMemo` to BellCurve calculations
+2. ✗ Added `key` prop to BellCurve component
+3. ✗ Added `key` prop to SVG element
+4. ✗ Changed cards array to use render functions instead of JSX elements
+5. ✗ Added `key={currentCard}` to LessonContainer card wrapper
+
+**Hypothesis:**
+- Possible Next.js SSR/hydration issue
+- Could be SVG DOM update quirk in React
+- Might need to force re-mount entire component
+- May need to use `useEffect` + DOM manipulation
+
+**Next Steps to Try:**
+- Test in dev mode vs production build
+- Try `forceUpdate` or ref-based SVG updates
+- Check if issue exists in other browsers
+- Simplify BellCurve to minimal reproduction
+- Use canvas instead of SVG
+
 ## Notes
 
 - Start simple, iterate based on real instructor feedback
@@ -509,3 +706,4 @@ Must meet WCAG 2.1 Level AA standards:
 - AI features are differentiators but come after core functionality works
 - Keep course creation as simple as possible while being powerful
 - Mobile-first design (most students use phones)
+- Interactive demos are powerful sales tools - invest in polish
